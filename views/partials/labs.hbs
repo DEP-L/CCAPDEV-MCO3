@@ -1,0 +1,34 @@
+<h1>Manage Labs</h1>
+<div class="container">
+    <div>
+        <!-- create labs -->
+        <form action="/create-lab" method="POST">
+            <div>
+                <label for="startTime">Start Time</label>
+                <select id="startTime" name="startTime"></select>
+            </div>
+
+            <div>
+                <label for="endTime">End Time</label>
+                <select id="endTime" name="endTime"></select>
+            </div>
+
+            <div>
+                <label for="seatCount">Number of Seats</label>
+                <input type="number" id="seatCount" name="seatCount">
+            </div>
+
+            <button type="submit">Create Lab</button>
+        </form>
+
+        <!-- delete labs -->
+        <form action="/delete-lab" method="DELETE">
+            <div>
+                <label for="lab">Select Lab</label>
+                <select id="lab" name="lab"></select>
+            </div>
+
+            <button type="submit">Delete Lab</button>
+        </form>
+    </div>
+</div>

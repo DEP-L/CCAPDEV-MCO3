@@ -1,0 +1,40 @@
+<h1>Profile</h1>
+<div class="container">
+    <div>
+        <!-- user profile details -->
+        <form action="/edit-profile" method="POST">
+            <div>
+                <img src="{{image}}">
+                <input type="file" id="image" name="image">
+            </div>
+
+            <div>
+                <label for="displayName">Display Name</label>
+                <input id="displayName" name="displayName" value="{{displayName}}">
+            </div>
+
+            <div>
+                <label for="description">Profile Description</label>
+                <textarea id="description" name="description" value="{{description}}"></textarea>
+            </div>
+
+            <button type="submit">Save Changes</button>
+        </form>
+
+        <!-- user reservations -->
+        <div>
+            {{#each reservation}}
+            <div>
+                <p>Name: {{displayName}}</p>
+                <p>Lab: {{labID}}</p>
+                <p>Date: {{reserveDate}}</p>
+                {{#each slot}}
+                <p>Time: {{time}}, Seat: {{seat}}</p>
+                {{/each}}
+
+                <button>Delete Reservation</button>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,29 @@
+<h1>Dashboard</h1>
+<div class="container">
+    <div>
+        <form action="/reserve-slot" method="POST">
+            <div>
+                <label for="lab">Select Lab</label>
+                <select id="lab" name="lab"></select>
+            </div>
+
+            <div>
+                <label for="date">Select Date</label>
+                <input type="date" id="date" name="date">
+            </div>
+
+            {{#if}}
+            <div>
+                <label for="studentID"></label>
+                <input type="number" id="studentID" name="studentID">
+            </div>
+            {{/if}}
+
+            <!-- table of lab slot availability -->
+
+            <!-- slots to be reserved -->
+
+            <button type="submit">Reserve Slots</button>
+        </form>
+    </div>
+</div>
