@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Dashboard</title>
+        <link rel="stylesheet" href="css/style.css">
+        <script src="js/util.js"></script>
+        <script src="js/reserve.js"></script>
+    </head>
+
+    <body>
+        <div id="container">
+            <h3>Dashboard</h3>
+            <div id="navigationSection">
+                <a id="profile" href="#">View Profile</a>
+                <a id="lab" href="#">Manage Labs</a>
+                <a id="logout" href="#">Logout</a>
+            </div>
+
+            <div id="reserveSection">
+                <label>Select Lab: </label>
+                <select id="labSelect"></select><br>
+
+                <label>Select Date: </label>
+                <input id="dateSelect" type="date"><br>
+
+                <label id="studentIDInputLabel">Student ID: </label>
+                <input id="studentIDInput"><br>
+
+                <div id="dateNavigation">
+                    <button id="prevDay">← Prev</button>
+                    <button id="nextDay">Next →</button>
+                </div>
+
+                <table id="labView"></table>
+
+                <p id="reservationView"></p><br>
+
+                <label id="anonLabel">Reserve Anonymously: </label>
+                <input id="anon" type="checkbox"><br>
+
+                <button id="reserveBtn">Confirm Reservation</button>
+            </div>
+        </div>
+    </body>
+</html>

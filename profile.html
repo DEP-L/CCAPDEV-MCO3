@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Profile</title>
+        <!-- <link rel="stylesheet" href="css/style.css"> -->
+        <script src="js/util.js"></script>
+        <script src="js/reserve.js"></script>
+        <script src="js/profile.js"></script>
+    </head>
+
+    <body>
+        <div id="container">
+            <h3>User Profile</h3>
+            <img id="image" src="img/default-avatar.jpg" alt="Profile Picture" width="150"><br>
+            <input type="file" id="imageUpload" accept="image/*"><br>
+
+            <label>Display Name</label><br>
+            <input type="text" id="displayName"><br><br>
+
+            <label>Description</label><br>
+            <textarea id="description" rows="4"></textarea><br>
+
+            <div id="reserveSection"></div>
+
+            <div id="buttonSection">
+                <button id="saveAccount">Save Changes</button>
+                <button id="deleteAccount">Delete Account</button>
+            </div>
+
+            <div id="navigationSection">
+                <a id="dashboard" href="#">Dashboard</a>
+                <a id="logout" href="#">Logout</a>
+            </div>
+        </div>
+    </body>
+</html>

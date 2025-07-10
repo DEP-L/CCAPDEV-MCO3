@@ -1,0 +1,22 @@
+{
+  "name": "ccapdev_mco2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aaron-key/CCAPDEV_MCO2.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aaron-key/CCAPDEV_MCO2/issues"
+  },
+  "homepage": "https://github.com/aaron-key/CCAPDEV_MCO2#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

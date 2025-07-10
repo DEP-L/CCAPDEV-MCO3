@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Labs</title>
+        <!-- <link rel="stylesheet" href="css/style.css"> -->
+        <script src="js/util.js"></script>
+        <script src="js/reserve.js"></script>
+        <script src="js/lab.js"></script>
+    </head>
+
+    <body>
+        <div id="container">
+            <h3>Manage Labs</h3>
+            <div id="navigationSection">
+                <a id="dashboard" href="#">Dashboard</a>
+            </div>
+
+            <div id="labSection">
+                <!--create lab-->
+                <form id="createLabForm">
+                    <label>Start Time: </label>
+                    <select id="startTime"></select><br>
+
+                    <label>End Time:</label>
+                    <select id="endTime"></select><br>
+
+                    <label>Number of Seats: </label>
+                    <input id="seatNumber"><br>
+
+                    <button type="submit">Create Lab</button>
+                </form>
+
+                <!--editing and deleting labs-->
+                <form id="deleteLabForm">
+                    <label>Select Lab:</label>
+                    <select id="labSelect"></select><br>
+
+                    <button type="submit">Remove Lab</button>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>
