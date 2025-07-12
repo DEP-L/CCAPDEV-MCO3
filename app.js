@@ -2,6 +2,7 @@ const express = require('express');
 const exphbs = require('express-handlebars');
 const path = require('path');
 const mongoose = require('mongoose');
+const User = require('./model/User');
 
 const app = express();
 const port = 3000;
@@ -58,6 +59,52 @@ app.get('/profile', (req, res) => {
 });
 
 // temp post routes
+
+// register post route
+app.post('/register', async (req, res) => {
+    const { email, password, accountType } = req.body;
+
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.send('Email already registered.');
+        }
+
+        const newUser = new User({
+            email,
+            password,
+            accountType,
+            studentID: accountType === 'student' ? generateID('student') : 0,
+            techID: accountType === 'tech' ? generateID('tech') : 0
+        });
+
+        await newUser.save();
+        res.send('Registration successful!');
+    } catch (err) {
+        console.error(err);
+        res.send('Error during registration.');
+    }
+});
+
+// login post route
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email, password });
+
+        if (!user) {
+            return res.send('Invalid email or password');
+        }
+
+        // sends users to dashboard if login is successful
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error(err);
+        res.send('Error during login.');
+    }
+});
+
 app.post('/create-lab', (req, res) => {
     // add later: create lab in DB
     res.send('Lab created');
@@ -76,3 +123,18 @@ app.post('/edit-profile', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
+// ------ TEMPORARY HELPER FUNCTIONS ------ (remove if implemented properly later)
+
+// ------ USER ID GENERATION ----
+let studentIDCounter = 1001;
+let techIDCounter = 2001;
+
+function generateID(type) {
+    if (type === 'student') {
+        return studentIDCounter++;
+    } else {
+        return techIDCounter++;
+    }
+}
+// -------------------------------
