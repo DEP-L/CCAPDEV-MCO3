@@ -1,40 +1,58 @@
 <h1>Dashboard</h1>
-<div class="container">
-    <div>
-        <form action="/reserve-slot" method="POST">
-            <div>
-                <label for="lab">Select Lab</label>
-                <select id="lab" name="lab"></select>
-            </div>
-
-            <div>
-                <label for="date">Select Date</label>
-                <input type="date" id="date" name="date">
-            </div>
-
-            {{#if studentID}}
-            <div>
-                <label for="studentID">Student ID</label>
-                <input type="number" id="studentID" name="studentID" value="{{studentID}}" readonly>
-            </div>
-            {{/if}}
-
+<div class="container-sm my-5 border">
+    <nav class="navbar navbar-expand-sm">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a href="/profile/id/{{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}?ownerID={{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}" class="nav-link">
+                    View Profile
+                </a>
+            </li>
             {{#if techID}}
-            <div>
-                <label for="techID">Technician ID</label>
-                <input type="number" id="techID" name="techID" value="{{techID}}" readonly>
-            </div>
+            <li class="nav-item">
+                <a href="/labs" class="nav-link">
+                    Manage Labs
+                </a>
+            </li>
             {{/if}}
+            <li class="nav-item">
+                <a href="/logout" class="nav-link">
+                    Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
 
-            <!-- table of lab slot availability -->
+    <form action="/reserve-slot" method="POST">
+        <div>
+            <label class="form-label" for="lab">Select Lab</label>
+            <select class="form-select" for="lab" name="lab"></select>
+        </div>
 
-            <!-- slots to be reserved -->
+        <div>
+            <label class="form-label" for="date">Select Date</label>
+            <input class="form-control" type="date" id="date" name="date">
+        </div>
 
-            <button type="submit">Reserve Slots</button>
-        </form>
+        {{#if studentID}}
+        <div>
+            <label class="form-label" for="studentID">Student ID</label>
+            <input class="form-control" type="number" id="studentID" name="studentID" value="{{studentID}}" readonly>
+        </div>
+        {{/if}}
 
-        <a href="/profile/id/{{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}?ownerID={{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}" class="btn btn-view-profile">
-            View Profile
-        </a>
-    </div>
+        {{#if techID}}
+        <div>
+            <label class="form-label" for="techID">Technician ID</label>
+            <input class="form-control" type="number" id="techID" name="techID" value="{{techID}}" readonly>
+        </div>
+        {{/if}}
+
+        <!-- table of lab slot availability -->
+
+        <!-- slots to be reserved -->
+
+        <button class="btn btn-outline-success" type="submit">Reserve Slots</button>
+    </form>
+
+    
 </div>
