@@ -7,6 +7,9 @@ const User = require('./model/User');
 const app = express();
 const port = 3000;
 
+// for express to correctly parse incoming POST form data (e.g req.body)
+app.use(express.urlencoded({ extended: true }));
+
 // MongoDB connection
 mongoose.connect('mongodb://localhost:27017/lab-reservation', {
     useNewUrlParser: true,
@@ -36,9 +39,23 @@ app.get('/register', (req, res) => {
     res.render('partials/register', { title: 'Register' });
 });
 
-app.get('/dashboard', (req, res) => {
-    // add later: fetch labs and user info
-    res.render('partials/dash', { title: 'Dashboard' });
+app.get('/dashboard/:id', async (req, res) => {
+    const userID = req.params.id;
+
+    try {
+        const user = await User.findById(userID);
+
+        res.render('partials/dash', {
+            title: 'Dashboard',
+            _id: user._id,
+            studentID: user.studentID,
+            techID: user.techID,
+            displayName: user.displayName
+        });
+    } catch (err) {
+        console.error(err);
+        res.send('Failed to load dashboard.');
+    }
 });
 
 app.get('/labs', (req, res) => {
@@ -46,16 +63,39 @@ app.get('/labs', (req, res) => {
     res.render('partials/labs', { title: 'Manage Labs' });
 });
 
-app.get('/profile', (req, res) => {
-    // add later: fetch user profile and user reservations
-    res.render('partials/profile', {
-        title: 'Profile',
-        displayName: 'John Doe',
-        description: 'Sample user',
-        image: '/img/default.png',
-        reservation: []
-        // temp values for now
-    });
+app.get('/profile/id/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const ownerID = parseInt(req.query.ownerID);
+    const isEditing = req.query.edit === 'true';
+
+    try {
+        const user = await User.findOne({
+            $or: [
+                { studentID: id },
+                { techID: id }
+            ]
+        });
+
+        if (!user) return res.send('User not found.');
+
+        const isOwner = user.studentID === ownerID || user.techID === ownerID;
+
+        res.render('partials/profile', {
+            _id: user._id,
+            title: 'Profile',
+            displayName: user.displayName,
+            description: user.description,
+            image: user.image,
+            reservation: user.reservation || [],
+            studentID: user.studentID,
+            techID: user.techID,
+            isOwner,
+            isEditing
+        });
+    } catch (err) {
+        console.error(err);
+        res.send('Failed to load profile.');
+    }
 });
 
 // temp post routes
@@ -98,10 +138,34 @@ app.post('/login', async (req, res) => {
         }
 
         // sends users to dashboard if login is successful
-        res.redirect('/dashboard');
+        res.redirect(`/dashboard/${user._id}`);
     } catch (err) {
         console.error(err);
         res.send('Error during login.');
+    }
+});
+
+// edit profile post route
+app.post('/edit-profile/id/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { displayName, description } = req.body;
+
+    try {
+        const user = await User.findOne({
+        $or: [{ studentID: id }, { techID: id }]
+        });
+
+        if (!user) return res.status(404).send('User not found.');
+
+        await User.findByIdAndUpdate(user._id, {
+        displayName,
+        description
+        // handle image upload later
+        });
+
+        res.redirect(`/profile/id/${id}?ownerID=${id}`);
+    } catch (err) {
+        res.status(500).send('Failed to update profile.');
     }
 });
 
@@ -113,11 +177,6 @@ app.post('/create-lab', (req, res) => {
 app.post('/reserve-slot', (req, res) => {
     // add later: reserve slot in DB
     res.send('Slot reserved');
-});
-
-app.post('/edit-profile', (req, res) => {
-    // add later: update user profile
-    res.send('Profile updated');
 });
 
 app.listen(port, () => {

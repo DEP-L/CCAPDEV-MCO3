@@ -1,40 +1,48 @@
 <h1>Profile</h1>
 <div class="container">
     <div>
-        <!-- user profile details -->
-        <form action="/edit-profile" method="POST">
-            <div>
+        {{#if isEditing}}
+            <form action="/edit-profile/id/{{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}" method="POST">
+                <!-- Your existing form with editable fields -->
+                <div>
                 <img src="{{image}}">
                 <input type="file" id="image" name="image">
+                </div>
+
+                <div>
+                <label for="displayName">Display Name</label>
+                <input id="displayName" name="displayName" value="{{displayName}}">
+                </div>
+
+                <div>
+                <label for="description">Profile Description</label>
+                <textarea id="description" name="description">{{description}}</textarea>
+                </div>
+
+                <button type="submit">Save Changes</button>
+            </form>
+        {{else}}
+            <!-- View-only version with disabled fields -->
+            <div>
+                <img src="{{image}}">
+                <input type="file" id="image" name="image" disabled>
             </div>
 
             <div>
                 <label for="displayName">Display Name</label>
-                <input id="displayName" name="displayName" value="{{displayName}}">
+                <input id="displayName" name="displayName" value="{{displayName}}" readonly>
             </div>
 
             <div>
                 <label for="description">Profile Description</label>
-                <textarea id="description" name="description" value="{{description}}"></textarea>
+                <textarea id="description" name="description" readonly>{{description}}</textarea>
             </div>
 
-            <button type="submit">Save Changes</button>
-        </form>
-
-        <!-- user reservations -->
-        <div>
-            {{#each reservation}}
-            <div>
-                <p>Name: {{displayName}}</p>
-                <p>Lab: {{labID}}</p>
-                <p>Date: {{reserveDate}}</p>
-                {{#each slot}}
-                <p>Time: {{time}}, Seat: {{seat}}</p>
-                {{/each}}
-
-                <button>Delete Reservation</button>
-            </div>
-            {{/each}}
-        </div>
+            {{#if isOwner}}
+                <a href="/profile/id/{{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}?edit=true&ownerID={{#if studentID}}{{studentID}}{{else}}{{techID}}{{/if}}" class="btn btn-edit-profile">
+                    Edit Profile
+                </a>
+            {{/if}}
+        {{/if}}
     </div>
 </div>
