@@ -15,9 +15,11 @@
             </li>
             {{/if}}
             <li class="nav-item">
-                <a href="/logout" class="nav-link">
-                    Logout
-                </a>
+                <form action="/logout" method="POST">
+                    <a href="/logout" class="nav-link">
+                        Logout
+                    </a>
+                </form>
             </li>
         </ul>
     </nav>

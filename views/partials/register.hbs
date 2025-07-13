@@ -1,27 +1,27 @@
 <h1>Register</h1>
-<div class="container">
+<div class="container-sm my-5 border">
     <div>
         <form action="/register" method="POST">
             <div>
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
+                <label class="form-label" for="email">Email</label>
+                <input class="form-control" type="email" id="email" name="email" required>
             </div>
 
             <div>
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <label class="form-label" for="password">Password</label>
+                <input class="form-control" type="password" id="password" name="password" required>
             </div>
 
             <div>
-                <label for="accountType">Account Type</label>
-                <select id="accountType" name="accountType">
+                <label class="form-label" for="accountType">Account Type</label>
+                <select class="form-select" id="accountType" name="accountType">
                     <option value="">-- choose an option--</option>
                     <option value="student">Student</option>
                     <option value="tech">Lab Technician</option>
                 </select>
             </div>
 
-            <button type="submit">Register</button>
+            <button class="btn btn-outline-success" type="submit">Register</button>
         </form>
 
         <div>
