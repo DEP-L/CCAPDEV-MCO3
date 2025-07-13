@@ -1,16 +1,22 @@
+// --- modules import ---
 const express = require('express');
 const exphbs = require('express-handlebars');
 const path = require('path');
 const mongoose = require('mongoose');
-const User = require('./model/User');
 
+// --- models import --- 
+const User = require('./model/User');
+const Lab = require('./model/Lab');
+const Reservation = require('./model/Reservation');
+
+// --- express app initialization ---
 const app = express();
 const port = 3000;
 
 // for express to correctly parse incoming POST form data (e.g req.body)
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection
+// --- mongoDB connection ---
 mongoose.connect('mongodb://localhost:27017/lab-reservation', {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -22,23 +28,78 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- handlebars configuration ---
 app.engine('hbs', exphbs.engine({ extname: '.hbs' }));
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
-// get routes
+// --- routes --- 
+
+// home
 app.get('/', (req, res) => {
     res.render('partials/index', { title: 'Welcome' });
 });
 
+// login
 app.get('/login', (req, res) => {
     res.render('partials/login', { title: 'Login' });
 });
 
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email, password });
+
+        if (!user) {
+            return res.send('Invalid email or password');
+        }
+
+        // sends users to dashboard if login is successful
+        res.redirect(`/dashboard/${user._id}`);
+    } catch (err) {
+        console.error(err);
+        res.send('Error during login.');
+    }
+});
+
+// register
 app.get('/register', (req, res) => {
     res.render('partials/register', { title: 'Register' });
 });
 
+app.post('/register', async (req, res) => {
+    const { email, password, accountType } = req.body;
+
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.send('Email already registered.');
+        }
+
+        const newUser = new User({
+            email,
+            password,
+            accountType,
+            studentID: accountType === 'student' ? generateID('student') : 0,
+            techID: accountType === 'tech' ? generateID('tech') : 0
+        });
+
+        await newUser.save();
+        res.send('Registration successful!');
+        res.redirect('/login');
+    } catch (err) {
+        console.error(err);
+        res.send('Error during registration.');
+    }
+});
+
+// logout
+app.post('/logout', async (req, res) => {
+    res.redirect('/login');
+});
+
+// dashboard
 app.get('/dashboard/:id', async (req, res) => {
     const userID = req.params.id;
 
@@ -58,11 +119,25 @@ app.get('/dashboard/:id', async (req, res) => {
     }
 });
 
+app.post('/reserve-slot', (req, res) => {
+    // add later: reserve slot in DB
+    res.send('Slot reserved');
+});
+
+// labs
 app.get('/labs', (req, res) => {
     // add later: fetch lab list
     res.render('partials/labs', { title: 'Manage Labs' });
 });
 
+app.post('/create-lab', (req, res) => {
+    // add later: create lab in DB
+
+
+    res.send('Lab created');
+});
+
+// profile
 app.get('/profile/id/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const ownerID = parseInt(req.query.ownerID);
@@ -98,60 +173,6 @@ app.get('/profile/id/:id', async (req, res) => {
     }
 });
 
-// temp post routes
-
-// register post route
-app.post('/register', async (req, res) => {
-    const { email, password, accountType } = req.body;
-
-    try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.send('Email already registered.');
-        }
-
-        const newUser = new User({
-            email,
-            password,
-            accountType,
-            studentID: accountType === 'student' ? generateID('student') : 0,
-            techID: accountType === 'tech' ? generateID('tech') : 0
-        });
-
-        await newUser.save();
-        res.send('Registration successful!');
-        res.redirect('/login');
-    } catch (err) {
-        console.error(err);
-        res.send('Error during registration.');
-    }
-});
-
-// login post route
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email, password });
-
-        if (!user) {
-            return res.send('Invalid email or password');
-        }
-
-        // sends users to dashboard if login is successful
-        res.redirect(`/dashboard/${user._id}`);
-    } catch (err) {
-        console.error(err);
-        res.send('Error during login.');
-    }
-});
-
-// logout post route
-app.post('/logout', async (req, res) => {
-    res.redirect('/login');
-});
-
-// edit profile post route
 app.post('/edit-profile/id/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const { displayName, description } = req.body;
@@ -173,18 +194,6 @@ app.post('/edit-profile/id/:id', async (req, res) => {
     } catch (err) {
         res.status(500).send('Failed to update profile.');
     }
-});
-
-app.post('/create-lab', (req, res) => {
-    // add later: create lab in DB
-    
-
-    res.send('Lab created');
-});
-
-app.post('/reserve-slot', (req, res) => {
-    // add later: reserve slot in DB
-    res.send('Slot reserved');
 });
 
 app.listen(port, () => {
