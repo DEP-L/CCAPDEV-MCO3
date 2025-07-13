@@ -177,6 +177,8 @@ app.post('/edit-profile/id/:id', async (req, res) => {
 
 app.post('/create-lab', (req, res) => {
     // add later: create lab in DB
+    
+
     res.send('Lab created');
 });
 
