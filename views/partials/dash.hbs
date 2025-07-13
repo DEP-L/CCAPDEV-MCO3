@@ -25,7 +25,11 @@
     <form action="/reserve-slot" method="POST">
         <div>
             <label class="form-label" for="lab">Select Lab</label>
-            <select class="form-select" id="lab" name="lab"></select>
+            <select class="form-select" id="lab" name="lab">
+            {{#each lab}}
+                <option value="{{this.labID}}">Lab {{this.labID}}</option>
+            {{/each}}
+            </select>
         </div>
 
         <div>
