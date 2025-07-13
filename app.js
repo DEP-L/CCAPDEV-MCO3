@@ -75,44 +75,11 @@ app.get('/login', checkNotAuthenticated, (req, res) => {
     res.render('partials/login', { title: 'Login' });
 });
 
-app.post('/login', checkNotAuthenticated, async (req, res) => {
-    const { email, password } = req.body;
-
-    if(!email || !password) {
-        return res.redirect('/login');
-    }
-
-    try {
-        const user = await User.findOne({ email: email });
-
-        if (!user) {
-            return res.redirect('/login');
-        }
-
-        const isMatch = password === user.password;
-
-        if(isMatch) {
-            req.session.user = {
-                _id: user._id,
-                email: user.email,
-                accountType: user.accountType,
-                studentID: user.studentID,
-                techID: user.techID,
-                displayName: user.displayName
-            };
-            res.redirect('/dashboard/' + user._id);
-        } else {
-            res.redirect('/login');
-        }
-    } catch (err) {
-        console.error('Login error: ', err);
-        res.send('Error during login.');
-        res.redirect('/login');
-    }
+app.get('/logout', async (req, res) => {
+    res.redirect('/login');
 });
 
-// register
-app.get('/register', checkNotAuthenticated, (req, res) => {
+app.get('/register', (req, res) => {
     res.render('partials/register', { title: 'Register' });
 });
 
@@ -174,17 +141,14 @@ app.get('/dashboard/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-app.post('/reserve-slot', (req, res) => {
-    // add later: reserve slot in DB
-    res.send('Slot reserved');
-});
-
-// labs
-app.get('/labs', (req, res) => {
-    // add later: fetch lab list
-    
-
-    res.render('partials/labs');
+app.get('/labs', async (req, res) => {
+  try {
+    const labs = await Lab.find();
+    res.render('partials/labs', { title: 'Manage Labs', labs });
+  } catch (err) {
+    console.error(err);
+    res.send('Error loading labs.');
+  }
 });
 
 app.post('/create-lab', (req, res) => {
@@ -230,7 +194,56 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
+// temp post routes
+
+// register post route
+app.post('/register', async (req, res) => {
+    const { email, password, accountType } = req.body;
+
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.send('Email already registered.');
+        }
+
+        const newUser = new User({
+            email,
+            password,
+            accountType,
+            studentID: accountType === 'student' ? generateID('student') : 0,
+            techID: accountType === 'tech' ? generateID('tech') : 0
+        });
+
+        await newUser.save();
+        res.send('Registration successful!');
+        res.redirect('/login');
+    } catch (err) {
+        console.error(err);
+        res.send('Error during registration.');
+    }
+});
+
+// login post route
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await User.findOne({ email, password });
+
+        if (!user) {
+            return res.send('Invalid email or password');
+        }
+
+        // sends users to dashboard if login is successful
+        res.redirect(`/dashboard/${user._id}`);
+    } catch (err) {
+        console.error(err);
+        res.send('Error during login.');
+    }
+});
+
+// edit profile post route
+app.post('/edit-profile/id/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const { displayName, description } = req.body;
 
@@ -250,6 +263,66 @@ app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
         res.redirect(`/profile/id/${id}?ownerID=${id}`);
     } catch (err) {
         res.status(500).send('Failed to update profile.');
+    }
+});
+
+app.post('/create-lab', async (req, res) => {
+    try {
+        const { startTime, endTime, seatCount } = req.body;
+
+        const baseDate = new Date().toISOString().split('T')[0];
+        const start = new Date(`${baseDate}T${startTime}`);
+        const end = new Date(`${baseDate}T${endTime}`);
+        const seats = parseInt(seatCount);
+
+        if (start >= end) return res.send('Start time must be before end time.');
+        if (isNaN(seats) || seats <= 0) return res.send('Invalid seat count.');
+
+        const latestLab = await Lab.findOne().sort({ labID: -1 });
+        const labID = latestLab ? latestLab.labID + 1 : 1001;
+
+        const newLab = new Lab({ labID, startTime: start, endTime: end, seatCount: seats });
+        await newLab.save();
+
+        res.redirect('/labs');
+    } catch (err) {
+        console.error('Error creating lab:', err);
+        res.status(500).send('Lab creation failed.');
+    }
+});
+
+app.post('/reserve-slot', async (req, res) => {
+    try {
+        const { labID, studentID, reserveDate, slots } = req.body;
+
+        // normalize slots array
+        const slotList = Array.isArray(slots) ? slots : [slots];
+
+        // generate reservationID manually
+        const latestRes = await Reservation.findOne().sort({ reservationID: -1 }).exec();
+        const reservationID = latestRes ? latestRes.reservationID + 1 : 10001;
+
+        const newReservation = new Reservation({
+            reservationID,
+            labID: parseInt(labID),
+            studentID: parseInt(studentID),
+            reserveDate: new Date(reserveDate),
+            slots: slotList
+        });
+
+        await newReservation.save();
+
+        const user = await User.findOne({ studentID });
+        if (user) {
+            user.reservation = user.reservation || [];
+            user.reservation.push(newReservation._id);
+            await user.save();
+        }
+
+        res.redirect(`/dashboard/${user._id}`);
+    } catch (err) {
+        console.error('Error reserving slot:', err);
+        res.status(500).send('Reservation failed.');
     }
 });
 
