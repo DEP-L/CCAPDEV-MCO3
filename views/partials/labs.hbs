@@ -3,7 +3,7 @@
     <nav class="navbar navbar-expand-sm">
         <ul class="navbar-nav">
             <li class="nav-item">
-                <a href="/dashboard/{{user._id}}" class="nav-link">
+                <a href="/dashboard/{{_id}}" class="nav-link">
                     Dashboard
                 </a>
             </li>
@@ -14,20 +14,20 @@
     <form action="/create-lab" method="POST">
         <div>
             <label class="form-label" for="startTime">Start Time</label>
-            <select class="form-select" id="startTime" name="startTime"></select>
+            <input class="form-control" type="datetime-local" id="startTime" name="startTime" required>
         </div>
 
         <div>
             <label class="form-label" for="endTime">End Time</label>
-            <select class="form-select" id="endTime" name="endTime"></select>
+            <input class="form-control" type="datetime-local" id="endTime" name="endTime" required>
         </div>
 
         <div>
             <label class="form-label" for="seatCount">Number of Seats</label>
-            <input class="form-control" type="number" id="seatCount" name="seatCount">
+            <input class="form-control" type="number" id="seatCount" name="seatCount" min="1" value="20" required>
         </div>
 
-        <button class="btn btn-outline-success" type="submit">Create Lab</button>
+        <button class="btn btn-outline-success mt-3" type="submit">Create Lab</button>
     </form>
 
     <!-- delete labs -->

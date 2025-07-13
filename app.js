@@ -3,6 +3,9 @@ const exphbs = require('express-handlebars');
 const path = require('path');
 const mongoose = require('mongoose');
 const User = require('./model/User');
+const Lab = require('./model/Lab');
+const Reservation = require('./model/Reservation');
+
 
 const app = express();
 const port = 3000;
@@ -35,6 +38,10 @@ app.get('/login', (req, res) => {
     res.render('partials/login', { title: 'Login' });
 });
 
+app.get('/logout', async (req, res) => {
+    res.redirect('/login');
+});
+
 app.get('/register', (req, res) => {
     res.render('partials/register', { title: 'Register' });
 });
@@ -58,9 +65,14 @@ app.get('/dashboard/:id', async (req, res) => {
     }
 });
 
-app.get('/labs', (req, res) => {
-    // add later: fetch lab list
-    res.render('partials/labs', { title: 'Manage Labs' });
+app.get('/labs', async (req, res) => {
+  try {
+    const labs = await Lab.find();
+    res.render('partials/labs', { title: 'Manage Labs', labs });
+  } catch (err) {
+    console.error(err);
+    res.send('Error loading labs.');
+  }
 });
 
 app.get('/profile/id/:id', async (req, res) => {
@@ -146,11 +158,6 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// logout post route
-app.post('/logout', async (req, res) => {
-    res.redirect('/login');
-});
-
 // edit profile post route
 app.post('/edit-profile/id/:id', async (req, res) => {
     const id = parseInt(req.params.id);
@@ -175,14 +182,69 @@ app.post('/edit-profile/id/:id', async (req, res) => {
     }
 });
 
-app.post('/create-lab', (req, res) => {
-    // add later: create lab in DB
-    res.send('Lab created');
+app.post('/create-lab', async (req, res) => {
+    try {
+        const latestLab = await Lab.findOne().sort({ labID: -1 }).exec();
+        const newLabID = latestLab ? latestLab.labID + 1 : 1001; // labID starts at 1001
+        const { startTime, endTime, seatCount } = req.body;
+
+        // convert from datetime-local string to JS Date objects
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const seats = parseInt(seatCount);
+
+        // validate inputs
+        if (start >= end) return res.send('Start time must be before end time.');
+        if (isNaN(seats) || seats <= 0) return res.send('Invalid seat count.');
+
+        const newLab = new Lab({
+            labID: newLabID,
+            startTime: start,
+            endTime: end,
+            seatCount: seats
+        });
+
+        await newLab.save();
+        res.redirect('/labs');
+    } catch (err) {
+        console.error('Error creating lab:', err);
+        res.status(500).send('Failed to create lab.');
+    }
 });
 
-app.post('/reserve-slot', (req, res) => {
-    // add later: reserve slot in DB
-    res.send('Slot reserved');
+app.post('/reserve-slot', async (req, res) => {
+    try {
+        const { labID, studentID, reserveDate, slots } = req.body;
+
+        // normalize slots array
+        const slotList = Array.isArray(slots) ? slots : [slots];
+
+        // generate reservationID manually
+        const latestRes = await Reservation.findOne().sort({ reservationID: -1 }).exec();
+        const reservationID = latestRes ? latestRes.reservationID + 1 : 10001;
+
+        const newReservation = new Reservation({
+            reservationID,
+            labID: parseInt(labID),
+            studentID: parseInt(studentID),
+            reserveDate: new Date(reserveDate),
+            slots: slotList
+        });
+
+        await newReservation.save();
+
+        const user = await User.findOne({ studentID });
+        if (user) {
+            user.reservation = user.reservation || [];
+            user.reservation.push(newReservation._id);
+            await user.save();
+        }
+
+        res.redirect(`/dashboard/${user._id}`);
+    } catch (err) {
+        console.error('Error reserving slot:', err);
+        res.status(500).send('Reservation failed.');
+    }
 });
 
 app.listen(port, () => {
