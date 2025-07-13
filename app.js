@@ -184,31 +184,26 @@ app.post('/edit-profile/id/:id', async (req, res) => {
 
 app.post('/create-lab', async (req, res) => {
     try {
-        const latestLab = await Lab.findOne().sort({ labID: -1 }).exec();
-        const newLabID = latestLab ? latestLab.labID + 1 : 1001; // labID starts at 1001
         const { startTime, endTime, seatCount } = req.body;
 
-        // convert from datetime-local string to JS Date objects
-        const start = new Date(startTime);
-        const end = new Date(endTime);
+        const baseDate = new Date().toISOString().split('T')[0];
+        const start = new Date(`${baseDate}T${startTime}`);
+        const end = new Date(`${baseDate}T${endTime}`);
         const seats = parseInt(seatCount);
 
-        // validate inputs
         if (start >= end) return res.send('Start time must be before end time.');
         if (isNaN(seats) || seats <= 0) return res.send('Invalid seat count.');
 
-        const newLab = new Lab({
-            labID: newLabID,
-            startTime: start,
-            endTime: end,
-            seatCount: seats
-        });
+        const latestLab = await Lab.findOne().sort({ labID: -1 });
+        const labID = latestLab ? latestLab.labID + 1 : 1001;
 
+        const newLab = new Lab({ labID, startTime: start, endTime: end, seatCount: seats });
         await newLab.save();
+
         res.redirect('/labs');
     } catch (err) {
         console.error('Error creating lab:', err);
-        res.status(500).send('Failed to create lab.');
+        res.status(500).send('Lab creation failed.');
     }
 });
 
