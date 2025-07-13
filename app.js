@@ -1,6 +1,8 @@
 // --- modules import ---
 const express = require('express');
 const exphbs = require('express-handlebars');
+const session = require('express-session');
+const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
 
@@ -13,8 +15,18 @@ const Reservation = require('./model/Reservation');
 const app = express();
 const port = 3000;
 
-// for express to correctly parse incoming POST form data (e.g req.body)
-app.use(express.urlencoded({ extended: true }));
+// --- session middleware ---
+app.use(session({
+    secret: 'tempsecretkey',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 21 // 21 days
+    }
+}));
 
 // --- mongoDB connection ---
 mongoose.connect('mongodb://localhost:27017/lab-reservation', {
@@ -33,42 +45,78 @@ app.engine('hbs', exphbs.engine({ extname: '.hbs' }));
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
+// --- authentication middleware
+function isAuthenticated(req, res, next) {
+    if(req.session.user) {
+        return next();
+    }
+}
+
+function checkNotAuthenticated(req, res, next) {
+    if(req.session.user) {
+        return res.redirect('/dashboard');
+    }
+    next();
+}
+
 // --- routes --- 
 
 // home
 app.get('/', (req, res) => {
-    res.render('partials/index', { title: 'Welcome' });
+    if(req.session.user) {
+        res.redirect('/dashboard' + req.session.user._id);
+    } else {
+        res.redirect('/login');
+    }
 });
 
 // login
-app.get('/login', (req, res) => {
+app.get('/login', checkNotAuthenticated, (req, res) => {
     res.render('partials/login', { title: 'Login' });
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', checkNotAuthenticated, async (req, res) => {
     const { email, password } = req.body;
 
+    if(!email || !password) {
+        return res.redirect('/login');
+    }
+
     try {
-        const user = await User.findOne({ email, password });
+        const user = await User.findOne({ email: email });
 
         if (!user) {
-            return res.send('Invalid email or password');
+            return res.redirect('/login');
         }
 
-        // sends users to dashboard if login is successful
-        res.redirect(`/dashboard/${user._id}`);
+        const isMatch = password === user.password;
+
+        if(isMatch) {
+            req.session.user = {
+                _id: user._id,
+                email: user.email,
+                accountType: user.accountType,
+                studentID: user.studentID,
+                techID: user.techID,
+                displayName: user.displayName
+            };
+            res.redirect('/dashboard/' + user._id);
+        } else {
+            res.redirect('/login');
+        }
     } catch (err) {
-        console.error(err);
+        console.error('Login error: ', err);
         res.send('Error during login.');
+        res.redirect('/login');
     }
 });
 
 // register
-app.get('/register', (req, res) => {
+app.get('/register', checkNotAuthenticated, (req, res) => {
     res.render('partials/register', { title: 'Register' });
 });
 
-app.post('/register', async (req, res) => {
+app.post('/register', checkNotAuthenticated, async (req, res) => {
     const { email, password, accountType } = req.body;
 
     try {
@@ -96,11 +144,18 @@ app.post('/register', async (req, res) => {
 
 // logout
 app.post('/logout', async (req, res) => {
-    res.redirect('/login');
+    const userID = req.session.user ? req.session.user._id : undefined;
+    req.session.destroy(err => {
+        if(err) {
+            console.error('Error destroying session:', err);
+            return res.redirect('/dashboard/' + userID);
+        }
+        res.redirect('/login');
+    });
 });
 
 // dashboard
-app.get('/dashboard/:id', async (req, res) => {
+app.get('/dashboard/:id', isAuthenticated, async (req, res) => {
     const userID = req.params.id;
 
     try {
@@ -127,7 +182,9 @@ app.post('/reserve-slot', (req, res) => {
 // labs
 app.get('/labs', (req, res) => {
     // add later: fetch lab list
-    res.render('partials/labs', { title: 'Manage Labs' });
+    
+
+    res.render('partials/labs');
 });
 
 app.post('/create-lab', (req, res) => {
@@ -138,7 +195,7 @@ app.post('/create-lab', (req, res) => {
 });
 
 // profile
-app.get('/profile/id/:id', async (req, res) => {
+app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
     const id = parseInt(req.params.id);
     const ownerID = parseInt(req.query.ownerID);
     const isEditing = req.query.edit === 'true';
@@ -173,7 +230,7 @@ app.get('/profile/id/:id', async (req, res) => {
     }
 });
 
-app.post('/edit-profile/id/:id', async (req, res) => {
+app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
     const id = parseInt(req.params.id);
     const { displayName, description } = req.body;
 
@@ -201,6 +258,78 @@ app.listen(port, () => {
 });
 
 // ------ TEMPORARY HELPER FUNCTIONS ------ (remove if implemented properly later)
+
+// --- seeder function for temporary database values ---
+async function seedDatabase() {
+    try {
+        // Create a default admin user if not exists
+        const adminUser = await User.findOne({ email: 'admin@dlsu.edu.ph' });
+        if (!adminUser) {
+            const password = 123;
+            const newAdmin = new User({
+                email: 'admin@dlsu.edu.ph',
+                password: password,
+                accountType: 'tech',
+                techID: 2001,
+                displayName: 'Admin User'
+            });
+            await newAdmin.save();
+            console.log('Default admin user created: admin@dlsu.edu.ph / 123');
+        }
+
+        // Create a default student user if not exists
+        const studentUser = await User.findOne({ email: 'student@dlsu.edu.ph' });
+        if (!studentUser) {
+            const password = 123;
+            const newStudent = new User({
+                email: 'student@dlsu.edu.ph',
+                password: password,
+                accountType: 'student',
+                studentID: 1001,
+                displayName: 'Student User'
+            });
+            await newStudent.save();
+            console.log('Default student user created: stustudent@dlsu.edu.ph / 123');
+        }
+
+        // Create a default lab if not exists
+        const lab101 = await Lab.findOne({ labID: 101 });
+        if (!lab101) {
+            const newLab = new Lab({
+                labID: 101,
+                startTime: new Date().setHours(8, 0, 0, 0), // 8 AM today
+                endTime: new Date().setHours(17, 0, 0, 0), // 5 PM today
+                seatCount: 20
+            });
+            await newLab.save();
+            console.log('Default Lab 101 created.');
+        }
+
+        // Create a sample reservation for today if not exists
+        const today = moment().startOf('day').toDate();
+        const existingReservation = await Reservation.findOne({ labID: 101, studentID: 1001, reserveDate: today });
+        if (!existingReservation) {
+            const newReservation = new Reservation({
+                reservationID: 1, // Simple ID for demo
+                labID: 101,
+                studentID: 1001,
+                reserveDate: today,
+                requestDate: new Date(),
+                slots: ['09:00', '09:30', '10:00']
+            });
+            await newReservation.save();
+            console.log('Sample reservation for Lab 101 created for student 1001.');
+        }
+
+    } catch (error) {
+        console.error('Database seeding error:', error);
+    }
+}
+
+// call seedDatabase after successful MongoDB connection
+mongoose.connection.on('connected', () => {
+    seedDatabase();
+});
 
 // ------ USER ID GENERATION ----
 let studentIDCounter = 1001;
