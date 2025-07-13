@@ -120,6 +120,7 @@ app.post('/register', async (req, res) => {
 
         await newUser.save();
         res.send('Registration successful!');
+        res.redirect('/login');
     } catch (err) {
         console.error(err);
         res.send('Error during registration.');
@@ -143,6 +144,11 @@ app.post('/login', async (req, res) => {
         console.error(err);
         res.send('Error during login.');
     }
+});
+
+// logout post route
+app.post('/logout', async (req, res) => {
+    res.redirect('/login');
 });
 
 // edit profile post route
