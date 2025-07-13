@@ -1,31 +1,29 @@
-<h1>Register</h1>
-<div class="container-sm my-5 border">
-    <div>
-        <form action="/register" method="POST">
-            <div>
-                <label class="form-label" for="email">Email</label>
-                <input class="form-control" type="email" id="email" name="email" required>
-            </div>
-
-            <div>
-                <label class="form-label" for="password">Password</label>
-                <input class="form-control" type="password" id="password" name="password" required>
-            </div>
-
-            <div>
-                <label class="form-label" for="accountType">Account Type</label>
-                <select class="form-select" id="accountType" name="accountType">
-                    <option value="">-- choose an option--</option>
-                    <option value="student">Student</option>
-                    <option value="tech">Lab Technician</option>
-                </select>
-            </div>
-
-            <button class="btn btn-outline-success" type="submit">Register</button>
-        </form>
+<div class="container-sm my-5 w-75">
+    <h1>Register</h1>
+    <form action="/register" method="POST">
+        <div>
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" required>
+        </div>
 
         <div>
-            <p>Have an account? <a href="/login">Login</a></p>
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" type="password" id="password" name="password" required>
         </div>
+
+        <div>
+            <label class="form-label" for="accountType">Account Type</label>
+            <select class="form-select" id="accountType" name="accountType">
+                <option value="">-- choose an option--</option>
+                <option value="student">Student</option>
+                <option value="tech">Lab Technician</option>
+            </select>
+        </div>
+
+        <button class="btn btn-outline-success" type="submit">Register</button>
+    </form>
+
+    <div>
+        <p>Have an account? <a href="/login">Login</a></p>
     </div>
 </div>

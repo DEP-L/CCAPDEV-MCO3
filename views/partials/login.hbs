@@ -1,22 +1,20 @@
-<h1>Login</h1>
-<div class="container-sm my-5">
-    <div>
-        <form action="/login" method="POST">
-            <div>
-                <label class="form-label" for="email">Email</label>
-                <input class="form-control" type="email" id="email" name="email" required>
-            </div>
-
-            <div>
-                <label class="form-label" for="password">Password</label>
-                <input class="form-control" type="password" id="password" name="password" required>
-            </div>
-
-            <button class="btn btn-outline-success" type="submit">Login</button>
-        </form>
+<div class="container-sm my-5 w-75">
+    <h1>Login</h1>
+    <form action="/login" method="POST">
+        <div>
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" required>
+        </div>
 
         <div>
-            <p>Don't have an account? <a href="/register">Register</a></p>
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" type="password" id="password" name="password" required>
         </div>
+
+        <button class="btn btn-outline-success" type="submit">Login</button>
+    </form>
+
+    <div>
+        <p>Don't have an account? <a href="/register">Register</a></p>
     </div>
 </div>

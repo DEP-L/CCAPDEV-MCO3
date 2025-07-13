@@ -1,5 +1,5 @@
-<h1>Dashboard</h1>
-<div class="container-sm my-5 border">
+<div class="container-sm my-5 w-75">
+    <h1>Dashboard</h1>
     <nav class="navbar navbar-expand-sm">
         <ul class="navbar-nav">
             <li class="nav-item">
@@ -7,13 +7,6 @@
                     View Profile
                 </a>
             </li>
-            {{#if techID}}
-            <li class="nav-item">
-                <a href="/labs" class="nav-link">
-                    Manage Labs
-                </a>
-            </li>
-            {{/if}}
             <li class="nav-item">
                 <form action="/logout" method="POST">
                     <button type="submit" class="btn btn-link nav-link">Logout</button>
@@ -26,8 +19,8 @@
         <div>
             <label class="form-label" for="lab">Select Lab</label>
             <select class="form-select" id="lab" name="lab">
-            {{#each lab}}
-                <option value="{{this.labID}}">Lab {{this.labID}}</option>
+            {{#each labs}}
+                <option value="{{labID}}" {{#if (eq labID ../selectedLab.labID)}}selected{{/if}}>{{labName}}</option>
             {{/each}}
             </select>
         </div>
@@ -52,32 +45,40 @@
         {{/if}}
 
         <!-- table of lab slot availability -->
-        <table>
-        {{#each timeSlots}}
-            <tr>
-                <td>{{formatTime this.time}}</td>
-                <td>
-                    {{#if this.isReserved}}
-                        <span class="status-reserved">Reserved</span>
-                    {{else}}
-                        <span class="status-available">Available</span>
-                    {{/if}}
-                </td>
-                <td>
-                    {{#if this.reservedBy}}
-                        <span class="status-reserved-by">Student ID: {{this.reservedBy}}</span>
-                    {{else}}
-                        -
-                    {{/if}}
-                </td>
-            </tr>
-        {{/each}}
-        </table>
-
-        <!-- slots to be reserved -->
+        {{#if selectedLab}}
+            <h3>{{selectedLab.labName}}</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Time Slot</th>
+                        {{#times selectedLab.seatCount}}
+                        <th>{{inc @index}}</th>
+                        {{/times}}
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each selectedLab.timeList}}
+                    <tr>
+                        <td>{{this}}</td>
+                        {{#times ../selectedLab.seatCount}}
+                        <td>-----</td>
+                        {{/times}}
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {{else}}
+            <p>Please select a lab to view its schedule.</p>
+        {{/if}}
+        <!-- slots reserved for the lab, for the student if student, all if tech -->
 
         <button class="btn btn-outline-success" type="submit">Reserve Slots</button>
     </form>
 
-    
+    <script>
+        document.getElementById('lab').addEventListener('change', function() {
+            const selectedLabID = this.value;
+            window.location.href = `/dashboard?labID=${selectedLabID}`;
+        });
+    </script>
 </div>

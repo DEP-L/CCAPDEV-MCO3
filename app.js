@@ -124,6 +124,7 @@ app.post('/logout', async (req, res) => {
 // dashboard
 app.get('/dashboard/:id', isAuthenticated, async (req, res) => {
     const userID = req.params.id;
+    const lab = Lab.findOne();
 
     try {
         const user = await User.findById(userID);
@@ -133,7 +134,9 @@ app.get('/dashboard/:id', isAuthenticated, async (req, res) => {
             _id: user._id,
             studentID: user.studentID,
             techID: user.techID,
-            displayName: user.displayName
+            displayName: user.displayName,
+
+            
         });
     } catch (err) {
         console.error(err);

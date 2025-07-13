@@ -6,7 +6,8 @@ const reservationSchema = new mongoose.Schema({
     studentID: { type: Number, required: true },
     reserveDate: { type: Date, required: true },
     requestDate: { type: Date, default: Date.now },
-    slots: { type: Array }
+    seatNumber: { type: Number, require: true},
+    timeList: { type: Array, require: true }
 });
 
 module.exports = mongoose.model('Reservation', reservationSchema);
