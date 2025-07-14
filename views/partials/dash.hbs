@@ -58,12 +58,12 @@
                         <td class="border">
                             {{#with (lookup ../reservedSlots this) as |slotsByTime|}}
                                 {{#if slotsByTime}}
-                                    {{#with (lookup slotsByTime (inc @index)) as |reservedByStudentID|}}
-                                            {{#if reservedByStudentID}}
-                                                {{reservedByStudentID}}
-                                            {{else}}
-                                                ---
-                                            {{/if}}
+                                    {{#with (lookup slotsByTime (inc @index)) as |reservedData|}}
+                                        {{#if reservedData}}
+                                            <a href="/profile/id/{{reservedData.studentID}}?ownerID={{_id}}">{{reservedData.studentID}}</a>
+                                        {{else}}
+                                            ---
+                                        {{/if}}
                                     {{/with}}
                                 {{else}}
                                     ---

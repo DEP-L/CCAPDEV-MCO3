@@ -251,13 +251,21 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 
             const reservationsForDate = await Reservation.find(commonReservationQuery).lean();
 
+            const studentIDsToFetch = [...new Set(reservationsForDate.map(r => r.studentID))];
+            const students = await User.find({ studentID: { $in: studentIDsToFetch } }).lean();
+            const studentMap = new Map(students.map(s => [s.studentID, s]));
+
             for(const reservation of reservationsForDate) {
                 for(const timeSlot of reservation.timeList) {
                     if(!reservedSlots[timeSlot]) {
                         reservedSlots[timeSlot] = {};
                     }
                     // mark the seat as reserved by the studentID
-                    reservedSlots[timeSlot][reservation.seatNumber] = reservation.studentID;
+                    const studentData = studentMap.get(reservation.studentID);
+                    reservedSlots[timeSlot][reservation.seatNumber] = {
+                        studentID: reservation.studentID, 
+                        displayName: studentData ? studentData.displayName : 'Unknown User'
+                    };
                 }
             }
         }
