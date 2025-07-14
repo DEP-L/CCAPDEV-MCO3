@@ -30,17 +30,10 @@
             <input class="form-control" type="date" id="date" name="date">
         </div>
 
-        {{#if studentID}}
-        <div>
-            <label class="form-label" for="studentID">Student ID</label>
-            <input class="form-control" type="number" id="studentID" name="studentID" value="{{studentID}}" readonly>
-        </div>
-        {{/if}}
-
         {{#if techID}}
         <div>
-            <label class="form-label" for="techID">Technician ID</label>
-            <input class="form-control" type="number" id="techID" name="techID" value="{{techID}}" readonly>
+            <label class="form-label" for="studentID">Student ID</label>
+            <input class="form-control" type="number" id="studentID" name="studentID" value="{{studentID}}">
         </div>
         {{/if}}
 
@@ -70,9 +63,31 @@
         {{else}}
             <p>Please select a lab to view its schedule.</p>
         {{/if}}
-        <!-- slots reserved for the lab, for the student if student, all if tech -->
+
+        <div>
+            <label class="form-label" for="timeSlots">Select Time Slots (Ctrl+Click to select multiple)</label>
+            <select class="form-select" id="timeSlots" name="timeSlots" multiple size="5">
+            {{#each selectedLab.timeList}}
+                <option value="{{this}}">{{this}}</option>
+            {{/each}}
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label" for="seat">Select Seat</label>
+            <select class="form-select" id="seat" name="seat">
+            {{#times selectedLab.seatCount}}
+                <option value="{{inc @index}}">{{inc @index}}</option>
+            {{/times}}
+            </select>
+        </div>
 
         <button class="btn btn-outline-success" type="submit">Reserve Slots</button>
+    </form>
+
+    <!-- slots reserved for the lab, for the student if student, all if tech -->
+    <form>
+
     </form>
 
     <script>
