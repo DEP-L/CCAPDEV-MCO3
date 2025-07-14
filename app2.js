@@ -45,14 +45,14 @@ const hbshelpers = {
     times: function(n, options) {
         let result = '';
         for (let i = 0; i < n; i++) {
-            result += options.fn(this, { data : { index : i} }); // 'this' preserves the current context
+            result += options.fn(this, { data : { index : i} }); 
         }
         return result;
     },
-    inc: function(value) { // Add this helper
+    inc: function(value) {
         return parseInt(value) + 1;
     },
-    eq: function(v1, v2) { // Add this helper
+    eq: function(v1, v2) { 
         return v1 === v2;
     }
 };
@@ -192,11 +192,9 @@ app.post('/register', async (req, res) => {
 
 // dashboard
 app.get('/dashboard', isAuthenticated, async (req, res) => {
-    // Corrected: Get userID from session, not from req.params.id
     const userID = req.session.user._id;
     
     try {
-        // This will now correctly query by the MongoDB _id
         const user = await User.findById(userID).lean();
         if(!user) {
             return res.send('User not found');
@@ -205,11 +203,42 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
         const labs = await Lab.find({}).lean();
         let selectedLab = null;
         const requestedLabID = req.query.labID;
+        let selectedDate = req.query.date;
 
         if(requestedLabID) {
             selectedLab = await Lab.findOne({ labID: parseInt(requestedLabID) }).lean();
         } else if(labs.length > 0) {
             selectedLab = labs[0];
+        }
+
+        if(!selectedDate) {
+            selectedDate = moment().format('YYYY-MM-DD');
+        }
+
+        // store reserved slots for easy lookup
+        let reservedSlots = {};
+
+        if(selectedLab) {
+            const startOfDayUTC = moment.utc(selectedDate).startOf('day').toDate();
+            const endOfDayUTC = moment.utc(selectedDate).endOf('day').toDate();
+
+            const reservationsForDate = await Reservation.find({
+                labID: selectedLab.labID,
+                reserveDate: {
+                    $gte: startOfDayUTC,
+                    $lte: endOfDayUTC
+                }
+            }).lean();
+
+            for(const reservation of reservationsForDate) {
+                for(const timeSlot of reservation.timeList) {
+                    if(!reservedSlots[timeSlot]) {
+                        reservedSlots[timeSlot] = {};
+                    }
+                    // mark the seat as reserved by the studentID
+                    reservedSlots[timeSlot][reservation.seatNumber] = reservation.studentID;
+                }
+            }
         }
 
         res.render('partials/dash', {
@@ -218,7 +247,9 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
             techID: user.techID,
             displayName: user.displayName,
             labs: labs,
-            selectedLab: selectedLab
+            selectedLab: selectedLab,
+            selectedDate: selectedDate,
+            reservedSlots: reservedSlots
         })
     } catch(err) {
         console.error(err);
@@ -257,6 +288,78 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
     }
 });
 
+// reservations
+app.post('/reserve-slot', isAuthenticated, async(req, res) => {
+    const { lab, date, timeSlots, seat } = req.body;
+    let targetStudentID;
+    let targetUserObjectID;
+
+    // form validation
+    if(!lab || !date || !timeSlots || !seat) {
+        return res.send('All reservation fields are required.');
+    }
+
+    try {
+        // assign studentID either from input if tech, or from session data if student
+        if(req.session.user.accountType === 'tech') {
+            targetStudentID = parseInt(req.body.studentID);
+            const studentUser = await User.findOne({ studentID: targetStudentID }).lean();
+            if(!studentUser) {
+                return res.send('Student ID does not exist.');
+            }
+            targetUserObjectID = studentUser._id;
+        } else {
+            targetStudentID = req.session.user.studentID;
+            targetUserObjectID = req.session.user._id;
+        }
+
+        // parsed body data
+        const selectedTimeSlots = Array.isArray(timeSlots) ? timeSlots : [timeSlots];
+        const newReservationDate = new Date(date);
+        const parsedLabID = parseInt(lab);
+        const parsedSeatNumber = parseInt(seat);
+
+        // find existing reservations for the same lab, date, and seat
+        const existingReservations = await Reservation.find({
+            labID: parsedLabID,
+            reserveDate: newReservationDate,
+            seatNumber: parsedSeatNumber
+        })
+
+        // check for time slot overlaps
+        for(const reservation of existingReservations) {
+            const existingTimeList = reservation.timeList;
+            for(const newSlot of selectedTimeSlots) {
+                if(existingTimeList.includes(newSlot)) {
+                    // overlap found
+                    return res.status(409).send(`Failed to make reservation: Time slot ${newSlot} is already reserved for this lab, date, and seat.`);
+                }
+            }
+        }
+
+        const newReservationID = await Reservation.generateReservationID();
+        
+        const newReservation = new Reservation({
+            reservationID: newReservationID,
+            labID: parsedLabID,
+            studentID: targetStudentID,
+            reserveDate: newReservationDate,
+            requestDate: Date.now(),
+            timeList: selectedTimeSlots,
+            seatNumber: parsedSeatNumber
+        });
+
+        await newReservation.save();
+        res.redirect('/dashboard?message=Reservation%20successful!');
+    } catch(err) {
+        console.error(err);
+        if(err.code === 11000 && err.message.includes('reservationID')) {
+            return res.status(409).send('Failed to make reservation: A reservation with this ID already exists or a duplicate ID was generated. Please try again.');
+        }
+        res.status(500).send("Failed to make reservation. Please try again");
+    }
+}); 
+
 // --- server initialization --- 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
@@ -271,15 +374,15 @@ async function seedDatabase() {
                 labName: 'Lab K101',
                 labID: 101,
                 timeList: [
-                    '10:00 AM - 10:30 AM',
-                    '10:30 AM - 11:00 AM',
-                    '11:00 AM - 11:30 AM',
-                    '11:30 AM - 12:00 PM',
-                    '12:00 PM - 12:30 PM',
-                    '12:30 PM - 1:00 PM',
-                    '1:00 PM - 1:30 PM',
-                    '1:30 PM - 2:00 PM',
-                    '2:00 PM - 2:30 PM'
+                    '10:00AM-10:30AM',
+                    '10:30AM-11:00AM',
+                    '11:00AM-11:30AM',
+                    '11:30AM-12:00PM',
+                    '12:00PM-12:30PM',
+                    '12:30PM-1:00PM',
+                    '1:00PM-1:30PM',
+                    '1:30PM-2:00PM',
+                    '2:00PM-2:30PM'
                 ],
                 seatCount: 12
             });
@@ -292,14 +395,14 @@ async function seedDatabase() {
                 labName: 'Lab B201',
                 labID: 201,
                 timeList: [
-                    '12:00 PM - 12:30 PM',
-                    '12:30 PM - 1:00 PM',
-                    '1:00 PM - 1:30 PM',
-                    '1:30 PM - 2:00 PM',
-                    '2:00 PM - 2:30 PM',
-                    '2:30 PM - 3:00 PM',
-                    '3:00 PM - 3:30 PM',
-                    '3:30 PM - 4:00 PM'
+                    '12:00PM-12:30PM',
+                    '12:30PM-1:00PM',
+                    '1:00PM-1:30PM',
+                    '1:30PM-2:00PM',
+                    '2:00PM-2:30PM',
+                    '2:30PM-3:00PM',
+                    '3:00PM-3:30PM',
+                    '3:30PM-4:00PM'
                 ],
                 seatCount: 15
             });
@@ -312,19 +415,19 @@ async function seedDatabase() {
                 labName: 'Lab R302',
                 labID: 302,
                 timeList: [
-                    '8:00 AM - 8:30 AM',
-                    '8:30 AM - 9:00 AM',
-                    '9:00 AM - 9:30 AM',
-                    '9:30 AM - 10:00 AM',
-                    '10:00 AM - 10:30 AM',
-                    '10:30 AM - 11:00 AM',
-                    '11:00 AM - 11:30 AM',
-                    '11:30 AM - 12:00 PM',
-                    '12:00 PM - 12:30 PM',
-                    '12:30 PM - 1:00 PM',
-                    '1:00 PM - 1:30 PM',
-                    '1:30 PM - 2:00 PM',
-                    '2:00 PM - 2:30 PM'
+                    '8:00AM-8:30AM',
+                    '8:30AM-9:00AM',
+                    '9:00AM-9:30AM',
+                    '9:30AM-10:00AM',
+                    '10:00AM-10:30AM',
+                    '10:30AM-11:00AM',
+                    '11:00AM-11:30AM',
+                    '11:30AM-12:00PM',
+                    '12:00PM-12:30PM',
+                    '12:30PM-1:00PM',
+                    '1:00PM-1:30PM',
+                    '1:30PM-2:00PM',
+                    '2:00PM-2:30PM'
                 ],
                 seatCount: 20
             });
