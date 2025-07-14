@@ -413,6 +413,27 @@ app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
     }
 });
 
+// delete account
+app.post('/delete-account/id/:id', isAuthenticated, async (req, res) => {
+    const idToDelete = req.params.id;
+
+    try {
+        const user = await User.findById(idToDelete);
+        if (!user) return res.send('User not found');
+
+        await Reservation.deleteMany({ studentID: user.studentID });
+
+        await User.deleteOne({ _id: idToDelete });
+
+        req.session.destroy(() => {
+        res.redirect('/login');
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Failed to delete account.');
+    }
+});
+
 // --- server initialization --- 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
