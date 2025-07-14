@@ -232,7 +232,10 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
     const ownerID = req.session.user._id.toString();
 
     try {
-        const user = await User.findById(ID).lean();
+        const userID = parseInt(req.params.id);
+        const user = await User.findOne({
+            $or: [{ studentID: userID }, { techID: userID }]
+        }).lean();
 
         if(!user) {
             return res.send('User not found');
