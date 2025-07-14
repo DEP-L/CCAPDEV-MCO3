@@ -54,6 +54,15 @@ const hbshelpers = {
     },
     eq: function(v1, v2) { 
         return v1 === v2;
+    },
+    formatDate: function(date) {
+        return moment(date).format('YYYY-MM-DD');
+    },
+    formatList: function(list) {
+        if(Array.isArray(list)) {
+            return list.join(', ');
+        }
+        return list;
     }
 };
 
@@ -217,18 +226,30 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 
         // store reserved slots for easy lookup
         let reservedSlots = {};
+        let userReservations = [];
 
         if(selectedLab) {
             const startOfDayUTC = moment.utc(selectedDate).startOf('day').toDate();
             const endOfDayUTC = moment.utc(selectedDate).endOf('day').toDate();
 
-            const reservationsForDate = await Reservation.find({
+            const commonReservationQuery = {
                 labID: selectedLab.labID,
                 reserveDate: {
                     $gte: startOfDayUTC,
                     $lte: endOfDayUTC
                 }
-            }).lean();
+            };
+
+            if(user.accountType === 'student') {
+                userReservations = await Reservation.find({
+                    ...commonReservationQuery,
+                    studentID: user.studentID
+                }).lean();
+            } else if(user.accountType === 'tech') {
+                userReservations = await Reservation.find(commonReservationQuery).lean();
+            }
+
+            const reservationsForDate = await Reservation.find(commonReservationQuery).lean();
 
             for(const reservation of reservationsForDate) {
                 for(const timeSlot of reservation.timeList) {
@@ -250,8 +271,11 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
             labs: labs,
             selectedLab: selectedLab,
             selectedDate: selectedDate,
-            reservedSlots: reservedSlots
-        })
+            reservedSlots: reservedSlots,
+            userReservations: userReservations,
+            isStudent: user.accountType === 'student',
+            isTech: user.accountType === 'tech'
+        });
     } catch(err) {
         console.error(err);
         res.send('Failed to load dashboard.');

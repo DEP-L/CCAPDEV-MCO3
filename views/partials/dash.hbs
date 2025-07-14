@@ -1,4 +1,4 @@
-<div class="container-sm my-5 w-75">
+<div class="container-sm my-5">
     <h1>Dashboard</h1>
     <nav class="navbar navbar-expand-sm">
         <ul class="navbar-nav">
@@ -38,33 +38,38 @@
         {{/if}}
 
         <!-- table of lab slot availability -->
+        <div>
         {{#if selectedLab}}
             <h3>{{selectedLab.labName}}</h3>
-            <table class="table table-striped">
+            <table class="table table-striped border">
                 <thead>
                     <tr>
-                        <th>Time Slot</th>
+                        <th class="border">Time Slot</th>
                         {{#times selectedLab.seatCount}}
-                        <th>{{inc @index}}</th>
+                        <th class="border">{{inc @index}}</th>
                         {{/times}}
                     </tr>
                 </thead>
                 <tbody>
                     {{#each selectedLab.timeList}}
                     <tr>
-                        <td>{{this}}</td>
+                        <td class="border">{{this}}</td>
                         {{#times ../selectedLab.seatCount}}
-                            {{#with (lookup ../reserveSlots this) as |slotsByTime|}}
-                                {{#with (lookup slotsByTime (inc @index)) as |reservedByStudentID|}}
-                                    <td>
-                                        {{#if reservedByStudentID}}
-                                            {{reservedByStudentID}}
-                                        {{else}}
-                                            ---
-                                        {{/if}}
-                                    </td>
-                                {{/with}}
+                        <td class="border">
+                            {{#with (lookup ../reservedSlots this) as |slotsByTime|}}
+                                {{#if slotsByTime}}
+                                    {{#with (lookup slotsByTime (inc @index)) as |reservedByStudentID|}}
+                                            {{#if reservedByStudentID}}
+                                                {{reservedByStudentID}}
+                                            {{else}}
+                                                ---
+                                            {{/if}}
+                                    {{/with}}
+                                {{else}}
+                                    ---
+                                {{/if}}
                             {{/with}}
+                        </td>
                         {{/times}}
                     </tr>
                     {{/each}}
@@ -73,6 +78,7 @@
         {{else}}
             <p>Please select a lab to view its schedule.</p>
         {{/if}}
+        </div>
 
         <div>
             <label class="form-label" for="timeSlots">Select Time Slots (Ctrl+Click to select multiple)</label>
@@ -95,10 +101,45 @@
         <button class="btn btn-outline-success" type="submit">Reserve Slots</button>
     </form>
 
-    <!-- slots reserved for the lab, for the student if student, all if tech -->
-    <form>
-
-    </form>
+    <!-- slots reserved for the lab, belonging to the student if studentID, all if techID -->
+    <div>
+        <h3>Current Reservations for {{selectedLab.labName}} on {{selectedDate}}</h3>
+        {{#if userReservations.length}}
+            <table class="table table-striped border">
+                <thead>
+                    <tr>
+                        <th>Reservation ID</th>
+                        {{#if isTech}}<th>Student ID</th>{{/if}}
+                        <th>Lab ID</th>
+                        <th>Seat Number</th>
+                        <th>Time Slots</th>
+                        <th>Reserve Date</th>
+                        <th>Request Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each userReservations}}
+                    <tr>
+                        <td>{{reservationID}}</td>
+                        {{#if ../isTech}}<td>{{studentID}}</td>{{/if}}
+                        <td>{{labID}}</td>
+                        <td>{{seatNumber}}</td>
+                        <td>{{formatList timeList}}</td>
+                        <td>{{formatDate reserveDate}}</td>
+                        <td>{{formatDate requestDate}}</td>
+                        <td>
+                            <button class="btn btn-outline-success">Edit Reservation</button>
+                            <button class="btn btn-outline-danger">Delete Reservation</button>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {{else}}
+            <p>No reservations found for this lab and date.</p>
+        {{/if}}
+    </div>
 
     <script>
         document.getElementById('lab').addEventListener('change', function() {
