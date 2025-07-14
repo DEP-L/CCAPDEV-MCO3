@@ -243,6 +243,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 
         res.render('partials/dash', {
             title: 'Dashboard',
+            _id: user._id.toString(),
             studentID: user.studentID,
             techID: user.techID,
             displayName: user.displayName,
@@ -260,16 +261,20 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 // profile
 app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
     const ID = req.params.id.toString();
-    const ownerID = req.session.user._id.toString();
+    const ownerID = req.query.ownerID;
+    const isEditing = req.query.edit === 'true';
 
     try {
-        const user = await User.findById(ID).lean();
+        const userID = parseInt(ID);
+        const user = await User.findOne({
+            $or: [{ studentID: userID }, { techID: userID }]
+        }).lean();
 
         if(!user) {
             return res.send('User not found');
         }
 
-        const isOwner = ID === ownerID;
+        const isOwner = ownerID === req.session.user._id.toString(); // checks ownership using _id
 
         res.render('partials/profile', {
             title: 'Profile',
@@ -280,7 +285,8 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
             reservations: user.reservations,
             studentID: user.studentID,
             techID: user.techID,
-            isOwner
+            isOwner,
+            isEditing
         })
     } catch (err) {
         console.error(err);
@@ -359,6 +365,29 @@ app.post('/reserve-slot', isAuthenticated, async(req, res) => {
         res.status(500).send("Failed to make reservation. Please try again");
     }
 }); 
+
+// saving newly edited profile
+app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
+    const { displayName, description, image } = req.body;
+    const ID = req.params.id;
+
+    try {
+        const user = await User.findOne({
+            $or: [{ studentID: parseInt(ID) }, { techID: parseInt(ID) }]
+        });
+
+        if (!user) return res.send('User not found');
+
+        user.displayName = displayName || user.displayName;
+        user.description = description || user.description;
+        user.image = image || user.image;
+
+        await user.save();
+        res.redirect(`/profile/id/${ID}`);
+    } catch (err) {
+        res.status(500).send('Failed to update profile.');
+    }
+});
 
 // --- server initialization --- 
 app.listen(port, () => {
