@@ -27,7 +27,7 @@
 
         <div>
             <label class="form-label" for="date">Select Date</label>
-            <input class="form-control" type="date" id="date" name="date">
+            <input class="form-control" type="date" id="date" name="date" value="{{selectedDate}}">
         </div>
 
         {{#if techID}}
@@ -54,7 +54,17 @@
                     <tr>
                         <td>{{this}}</td>
                         {{#times ../selectedLab.seatCount}}
-                        <td>-----</td>
+                            {{#with (lookup ../reserveSlots this) as |slotsByTime|}}
+                                {{#with (lookup slotsByTime (inc @index)) as |reservedByStudentID|}}
+                                    <td>
+                                        {{#if reservedByStudentID}}
+                                            {{reservedByStudentID}}
+                                        {{else}}
+                                            ---
+                                        {{/if}}
+                                    </td>
+                                {{/with}}
+                            {{/with}}
                         {{/times}}
                     </tr>
                     {{/each}}
@@ -93,7 +103,14 @@
     <script>
         document.getElementById('lab').addEventListener('change', function() {
             const selectedLabID = this.value;
-            window.location.href = `/dashboard?labID=${selectedLabID}`;
+            const selectedDate = document.getElementById('date').value;
+            window.location.href = `/dashboard?labID=${selectedLabID}&date=${selectedDate}`;
         });
+
+        document.getElementById('date').addEventListener('change', function() {
+            const selectedLabID = document.getElementById('lab').value;
+            const selectedDate = this.value;
+            window.location.href = `/dashboard?labID=${selectedLabID}&date=${selectedDate}`;
+        })
     </script>
 </div>
