@@ -129,8 +129,12 @@
                         <td>{{formatDate reserveDate}}</td>
                         <td>{{formatDate requestDate}}</td>
                         <td>
-                            <button class="btn btn-outline-success">Edit Reservation</button>
-                            <button class="btn btn-outline-danger">Delete Reservation</button>
+                            <button class="btn btn-outline-success">Edit</button>
+                            <form action="/delete-reservation" method="POST">
+                                <input type="hidden" name="reservationID" value="{{reservationID}}" style="display:inline;">
+                                <button class="btn btn-outline-danger">Delete</button>
+                            </form>
+                            
                         </td>
                     </tr>
                     {{/each}}

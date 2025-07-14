@@ -322,7 +322,6 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
 app.post('/reserve-slot', isAuthenticated, async(req, res) => {
     const { lab, date, timeSlots, seat } = req.body;
     let targetStudentID;
-    let targetUserObjectID;
 
     // form validation
     if(!lab || !date || !timeSlots || !seat) {
@@ -337,10 +336,8 @@ app.post('/reserve-slot', isAuthenticated, async(req, res) => {
             if(!studentUser) {
                 return res.send('Student ID does not exist.');
             }
-            targetUserObjectID = studentUser._id;
         } else {
             targetStudentID = req.session.user.studentID;
-            targetUserObjectID = req.session.user._id;
         }
 
         // parsed body data
@@ -389,6 +386,28 @@ app.post('/reserve-slot', isAuthenticated, async(req, res) => {
         res.status(500).send("Failed to make reservation. Please try again");
     }
 }); 
+
+app.post('/delete-reservation', isAuthenticated, async(req, res) => {
+    const { reservationID } = req.body;
+    const accountType = req.session.user.accountType;
+
+    try {
+        const reservation = await Reservation.findOne({ reservationID: parseInt(reservationID) }).lean();
+        if(!reservation) {
+            return res.status(404).send('Reservation not found');
+        }
+
+        if(accountType === 'student' && reservation.studentID !== req.session.user.studentID) {
+            return res.status(403).send('Reservation does not belong to current user.');
+        }
+
+        await Reservation.deleteOne({ reservationID: parseInt(reservationID) });
+        res.redirect('/dashboard?message=Reservation%20successfully%20deleted!');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Failed to delete reservation. Please try again.');
+    }
+});
 
 // saving newly edited profile
 app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
