@@ -6,6 +6,7 @@ const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const createUser = require('./utils/createUser');
 
 // --- models import --- 
 const User = require('./model/User');
@@ -138,15 +139,18 @@ app.post('/login', checkNotAuthenticated, async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // find a user with a matching email and password
-        const user = await User.findOne({ email, password }).lean();
+        const user = await User.findOne({ email });
 
-        // return if either email or password is invalid
-        if(!user) {
+        if (!user) {
             return res.send('Invalid email or password');
         }
 
-        // set the user session
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.send('Invalid email or password');
+        }
+
         req.session.user = {
             _id: user._id.toString(),
             email: user.email,
@@ -157,10 +161,10 @@ app.post('/login', checkNotAuthenticated, async (req, res) => {
             displayName: user.displayName,
             description: user.description,
             image: user.image
-        }
+        };
 
-        // redirect to dashboard
         res.redirect('/dashboard');
+
     } catch (err) {
         console.error(err);
         await logError(err, '/login', req.body?.email || req.session?.user?.email);
@@ -192,7 +196,7 @@ app.post('/register', async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ email: email }).lean();
+        const existingUser = await User.findOne({ email }).lean();
         if (existingUser) {
             return res.send('Email already registered. Please use a different email or log in.');
         }
@@ -200,9 +204,11 @@ app.post('/register', async (req, res) => {
         const accountType = 'student'; // force only student registration
         const newStudentID = await User.generateStudentID();
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const newUser = new User({
             email,
-            password,
+            password: hashedPassword,
             accountType,
             studentID: newStudentID,
             techID: 0,
@@ -519,42 +525,27 @@ app.get('/admin/create-tech', isLoggedIn, isAdmin, (req, res) => {
 
 
 app.post('/admin/create-tech', isLoggedIn, isAdmin, async (req, res) => {
-    const { email, password, confirmPassword, displayName } = req.body;
+    const { email, password } = req.body;
 
-    // basic validation
-    if (!email || !password || !confirmPassword || !displayName) {
+    if (!email || !password) {
         return res.render('admin/create-tech', { error: 'All fields are required.', user: req.session.user });
     }
 
-    if (password !== confirmPassword) {
-        return res.render('admin/create-tech', { error: 'Passwords do not match.', user: req.session.user });
-    }
-
     try {
-        // check email uniqueness
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.render('admin/create-tech', { error: 'Email is already in use.', user: req.session.user });
-        }
-
-        // generate techID
-        const techID = await User.generateTechID();
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newTech = new User({
+        await createUser({
             email,
-            password: hashedPassword,
-            accountType: 'tech',
-            techID,
-            displayName
+            password,
+            accountType: 'tech'
         });
 
-        await newTech.save();
-        res.redirect('/admin/create-tech?success=1');
+        return res.redirect('/admin/create-tech?success=1');
     } catch (err) {
         console.error(err);
         await logError(err, '/admin/create-tech', req.body?.email || req.session?.user?.email);
-        res.status(500).render('admin/create-tech', { error: 'Internal server error.', user: req.session.user });
+        return res.status(500).render('admin/create-tech', {
+            error: err.message || 'Internal server error.',
+            user: req.session.user
+        });
     }
 });
 
