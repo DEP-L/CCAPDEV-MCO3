@@ -5,12 +5,12 @@ const session = require('express-session');
 const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
-const ErrorLog = require('./models/ErrorLog');
 
 // --- models import --- 
 const User = require('./model/User');
 const Lab = require('./model/Lab');
 const Reservation = require('./model/Reservation');
+const ErrorLog = require('./model/ErrorLog');
 
 // --- middlewares import ---
 const { isLoggedIn, isAdmin, isTech, isStudent } = require('./middlewares/auth');
@@ -353,7 +353,6 @@ app.get('/profile/id/:id', isLoggedIn, async (req, res) => {
 app.post('/reserve-slot', isLoggedIn, async(req, res) => {
     const accountType = req.session.user.accountType;
     if (accountType !== 'student' && accountType !== 'tech') return res.status(403).send('Forbidden');
-    next();
 
     const { lab, date, timeSlots, seat } = req.body;
     let targetStudentID;
@@ -410,6 +409,20 @@ app.post('/reserve-slot', isLoggedIn, async(req, res) => {
             timeList: selectedTimeSlots,
             seatNumber: parsedSeatNumber
         });
+
+        // added security check to prevent duplicate reservations
+        const recentDuplicate = await Reservation.findOne({
+            studentID: targetStudentID,
+            labID: parsedLabID,
+            seatNumber: parsedSeatNumber,
+            reserveDate: newReservationDate,
+            timeList: { $size: selectedTimeSlots.length, $all: selectedTimeSlots },
+            requestDate: { $gte: new Date(Date.now() - 5000) } // last 5 seconds
+        });
+
+        if (recentDuplicate) {
+            return res.status(429).send('Duplicate reservation detected. Please wait a few seconds and try again.');
+        }
 
         await newReservation.save();
         res.redirect('/dashboard?message=Reservation%20successful!');
