@@ -12,6 +12,9 @@ const User = require('./model/User');
 const Lab = require('./model/Lab');
 const Reservation = require('./model/Reservation');
 
+// --- middlewares import ---
+const { isLoggedIn, isAdmin, isTech, isStudent } = require('./middlewares/auth');
+
 // --- express app initialization ---
 const app = express();
 const port = 3000;
@@ -100,12 +103,12 @@ app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
 // --- authentication middleware
-function isAuthenticated(req, res, next) {
-    if(req.session.user) {
-        return next();
-    } 
-    res.redirect('/login');
-}
+//function isAuthenticated(req, res, next) {
+//    if(req.session.user) {
+//        return next();
+//    } 
+//    res.redirect('/login');
+//}
 
 function checkNotAuthenticated(req, res, next) {
     if(req.session.user) {
@@ -218,7 +221,7 @@ app.post('/register', async (req, res) => {
 });
 
 // dashboard
-app.get('/dashboard', isAuthenticated, async (req, res) => {
+app.get('/dashboard', isLoggedIn, async (req, res) => {
     const userID = req.session.user._id;
     
     try {
@@ -310,7 +313,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 });
 
 // profile
-app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
+app.get('/profile/id/:id', isLoggedIn, async (req, res) => {
     const ID = req.params.id.toString();
     const ownerID = req.query.ownerID;
     const isEditing = req.query.edit === 'true';
@@ -347,7 +350,11 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
 });
 
 // reservations
-app.post('/reserve-slot', isAuthenticated, async(req, res) => {
+app.post('/reserve-slot', isLoggedIn, async(req, res) => {
+    const accountType = req.session.user.accountType;
+    if (accountType !== 'student' && accountType !== 'tech') return res.status(403).send('Forbidden');
+    next();
+
     const { lab, date, timeSlots, seat } = req.body;
     let targetStudentID;
 
@@ -417,9 +424,10 @@ app.post('/reserve-slot', isAuthenticated, async(req, res) => {
     }
 }); 
 
-app.post('/delete-reservation', isAuthenticated, async(req, res) => {
+app.post('/delete-reservation', isLoggedIn, async(req, res) => {
     const { reservationID } = req.body;
     const accountType = req.session.user.accountType;
+    if (accountType !== 'student' && accountType !== 'tech') return res.status(403).send('Forbidden');
 
     try {
         const reservation = await Reservation.findOne({ reservationID: parseInt(reservationID) }).lean();
@@ -442,7 +450,7 @@ app.post('/delete-reservation', isAuthenticated, async(req, res) => {
 });
 
 // saving newly edited profile
-app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
+app.post('/edit-profile/id/:id', isLoggedIn, async (req, res) => {
     const { displayName, description, image } = req.body;
     const ID = req.params.id;
 
@@ -466,7 +474,7 @@ app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
 });
 
 // delete account
-app.post('/delete-account/id/:id', isAuthenticated, async (req, res) => {
+app.post('/delete-account/id/:id', isLoggedIn, async (req, res) => {
     const idToDelete = req.params.id;
 
     try {
