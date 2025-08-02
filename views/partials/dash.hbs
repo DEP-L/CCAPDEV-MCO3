@@ -144,6 +144,16 @@
             <p>No reservations found for this lab and date.</p>
         {{/if}}
     </div>
+    <!-- for admins -->
+    <div>
+        <!-- admin controls -->
+        {{#if isAdmin}}
+        <div class="my-4">
+            <h2>Admin Controls</h2>
+            <a class="btn btn-outline-primary" href="admin/create-tech">Create Tech Account</a>
+        </div>
+        {{/if}}
+    </div>
 
     <script>
         document.getElementById('lab').addEventListener('change', function() {

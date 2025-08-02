@@ -5,6 +5,7 @@ const session = require('express-session');
 const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 // --- models import --- 
 const User = require('./model/User');
@@ -303,7 +304,8 @@ app.get('/dashboard', isLoggedIn, async (req, res) => {
             reservedSlots: reservedSlots,
             userReservations: userReservations,
             isStudent: user.accountType === 'student',
-            isTech: user.accountType === 'tech'
+            isTech: user.accountType === 'tech',
+            isAdmin: user.accountType === 'admin'
         });
     } catch (err) {
         console.error(err);
@@ -505,6 +507,54 @@ app.post('/delete-account/id/:id', isLoggedIn, async (req, res) => {
         console.error(err);
         await logError(err, '/delete-account', req.body?.email || req.session?.user?.email);
         res.status(500).send('Failed to delete account.');
+    }
+});
+// --- admin routes ---
+app.get('/admin/create-tech', isLoggedIn, isAdmin, (req, res) => {
+    res.render('admin/create-tech', {
+        user: req.session.user,
+        success: req.query.success === '1'
+    });
+});
+
+
+app.post('/admin/create-tech', isLoggedIn, isAdmin, async (req, res) => {
+    const { email, password, confirmPassword, displayName } = req.body;
+
+    // basic validation
+    if (!email || !password || !confirmPassword || !displayName) {
+        return res.render('admin/create-tech', { error: 'All fields are required.', user: req.session.user });
+    }
+
+    if (password !== confirmPassword) {
+        return res.render('admin/create-tech', { error: 'Passwords do not match.', user: req.session.user });
+    }
+
+    try {
+        // check email uniqueness
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.render('admin/create-tech', { error: 'Email is already in use.', user: req.session.user });
+        }
+
+        // generate techID
+        const techID = await User.generateTechID();
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newTech = new User({
+            email,
+            password: hashedPassword,
+            accountType: 'tech',
+            techID,
+            displayName
+        });
+
+        await newTech.save();
+        res.redirect('/admin/create-tech?success=1');
+    } catch (err) {
+        console.error(err);
+        await logError(err, '/admin/create-tech', req.body?.email || req.session?.user?.email);
+        res.status(500).render('admin/create-tech', { error: 'Internal server error.', user: req.session.user });
     }
 });
 
