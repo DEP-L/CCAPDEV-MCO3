@@ -5,6 +5,7 @@ const session = require('express-session');
 const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
+const ErrorLog = require('./models/ErrorLog');
 
 // --- models import --- 
 const User = require('./model/User');
@@ -33,12 +34,36 @@ mongoose.connect('mongodb://localhost:27017/lab-reservation', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(() => {
+    console.log('Connected to MongoDB');
+    seedDefaultAdmin();
+})
 .catch(err => console.error('MongoDB connection error:', err));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- create default admin ---
+const seedDefaultAdmin = async () => {
+    const existingAdmin = await User.findOne({ accountType: 'admin' }).lean();
+    if (!existingAdmin) {
+        await User.create({
+            email: 'admin@dlsu.edu.ph',
+            password: '123',
+            accountType: 'admin',
+            studentID: 0,
+            techID: 0,
+            displayName: 'Administrator',
+            description: '',
+            image: '',
+            reservations: []
+        });
+        console.log('Default admin created: admin@dlsu.edu.ph / 123');
+    } else {
+        console.log('Admin already exists. Skipping admin account creation.');
+    }
+};
 
 // --- handlebar helpers ---
 const hbshelpers = {
@@ -134,7 +159,8 @@ app.post('/login', checkNotAuthenticated, async (req, res) => {
         res.redirect('/dashboard');
     } catch (err) {
         console.error(err);
-        res.send('Failed to load dashboard.');
+        await logError(err, '/login', req.body?.email || req.session?.user?.email);
+        res.send('Failed to load the dashboard. Please try again later.');
     }
 });
 
@@ -155,35 +181,27 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const { email, password, accountType } = req.body;
+    const { email, password } = req.body;
 
-    if(!email || !password || !accountType) {
+    if (!email || !password) {
         return res.send('All fields are required.');
     }
 
     try {
-        const existingUser = await User.findOne({ email: email}).lean();
-        if(existingUser) {
+        const existingUser = await User.findOne({ email: email }).lean();
+        if (existingUser) {
             return res.send('Email already registered. Please use a different email or log in.');
         }
-        
-        let newStudentID = 0;
-        let newTechID = 0;
 
-        // generate ID using static methods from model
-        if(accountType === 'student') {
-            newStudentID = await User.generateStudentID();
-        } else if(accountType === 'tech') {
-            newTechID = await User.generateTechID();
-        }
+        const accountType = 'student'; // force only student registration
+        const newStudentID = await User.generateStudentID();
 
-        // create new user instance
         const newUser = new User({
-            email: email,
-            password: password, 
-            accountType: accountType,
+            email,
+            password,
+            accountType,
             studentID: newStudentID,
-            techID: newTechID,
+            techID: 0,
             displayName: "",
             description: "",
             image: "",
@@ -191,10 +209,10 @@ app.post('/register', async (req, res) => {
         });
 
         await newUser.save();
-
         res.redirect('/login');
     } catch (err) {
         console.error(err);
+        await logError(err, '/register', req.body?.email || req.session?.user?.email);
         res.send('Registration failed. Please try again later.');
     }
 });
@@ -284,9 +302,10 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
             isStudent: user.accountType === 'student',
             isTech: user.accountType === 'tech'
         });
-    } catch(err) {
+    } catch (err) {
         console.error(err);
-        res.send('Failed to load dashboard.');
+        await logError(err, '/dashboard', req.body?.email || req.session?.user?.email);
+        res.send('Failed to load the dashboard. Please try again later.');
     }
 });
 
@@ -322,7 +341,8 @@ app.get('/profile/id/:id', isAuthenticated, async (req, res) => {
         })
     } catch (err) {
         console.error(err);
-        res.send('Failed to load profile.');
+        await logError(err, '/profile', req.body?.email || req.session?.user?.email);
+        res.send('Failed to load profile. Please try again later.');
     }
 });
 
@@ -386,9 +406,11 @@ app.post('/reserve-slot', isAuthenticated, async(req, res) => {
 
         await newReservation.save();
         res.redirect('/dashboard?message=Reservation%20successful!');
-    } catch(err) {
+    } catch (err) {
+        await logError(err, '/reserve', req.session?.user?.email);
+
         console.error(err);
-        if(err.code === 11000 && err.message.includes('reservationID')) {
+        if (err.code === 11000 && err.message.includes('reservationID')) {
             return res.status(409).send('Failed to make reservation: A reservation with this ID already exists or a duplicate ID was generated. Please try again.');
         }
         res.status(500).send("Failed to make reservation. Please try again");
@@ -412,6 +434,8 @@ app.post('/delete-reservation', isAuthenticated, async(req, res) => {
         await Reservation.deleteOne({ reservationID: parseInt(reservationID) });
         res.redirect('/dashboard?message=Reservation%20successfully%20deleted!');
     } catch (err) {
+        await logError(err, '/delete-reservation', req.session?.user?.email);
+        
         console.error(err);
         res.status(500).send('Failed to delete reservation. Please try again.');
     }
@@ -436,6 +460,7 @@ app.post('/edit-profile/id/:id', isAuthenticated, async (req, res) => {
         await user.save();
         res.redirect(`/profile/id/${ID}`);
     } catch (err) {
+        await logError(err, '/edit-profile', req.body?.email || req.session?.user?.email);
         res.status(500).send('Failed to update profile.');
     }
 });
@@ -457,6 +482,7 @@ app.post('/delete-account/id/:id', isAuthenticated, async (req, res) => {
         });
     } catch (err) {
         console.error(err);
+        await logError(err, '/delete-account', req.body?.email || req.session?.user?.email);
         res.status(500).send('Failed to delete account.');
     }
 });
