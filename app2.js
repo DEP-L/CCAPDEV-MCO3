@@ -52,7 +52,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- create default admin ---
 const seedDefaultAdmin = async () => {
     const existingAdmin = await User.findOne({ accountType: 'admin' }).lean();
-    hashedPassword = bcrypt.hash('123', 10);
+    const hashedPassword = await bcrypt.hash('123', 10);
 
     if (!existingAdmin) {
         await User.create({
@@ -107,6 +107,12 @@ app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
 // --- authentication middleware
+//function isAuthenticated(req, res, next) {
+//    if(req.session.user) {
+//        return next();
+//    } 
+//    res.redirect('/login');
+//}
 
 function checkNotAuthenticated(req, res, next) {
     if(req.session.user) {
