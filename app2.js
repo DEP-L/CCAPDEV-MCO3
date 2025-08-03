@@ -6,10 +6,14 @@ const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const createUser = require('./utils/createUser');
+const logError = require('./utils/errorLogger');
 
 // --- models import ---
 const Lab = require('./model/Lab');
 const User = require('./model/User');
+const Reservation = require('./model/Reservation');
+const ErrorLog = require('./model/ErrorLog');
 
 // --- routes import ---
 const commonRoutes = require('./routes/common');
