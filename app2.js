@@ -33,6 +33,13 @@ app.use(session({
     }
 }));
 
+function checkNotAuthenticated(req, res, next) {
+    if(req.session.user) {
+        return res.redirect('/dashboard');
+    }
+    next();
+}
+
 // --- mongoDB connection ---
 mongoose.connect('mongodb://localhost:27017/lab-reservation', {
     useNewUrlParser: true,
@@ -71,6 +78,9 @@ const seedDefaultAdmin = async () => {
         console.log('Admin already exists. Skipping admin account creation.');
     }
 };
+
+// --- middleware import ---
+const { isLoggedIn, isAdmin, isTech, isStudent } = require('./middlewares/auth');
 
 // --- handlebar helpers ---
 const hbshelpers = {
