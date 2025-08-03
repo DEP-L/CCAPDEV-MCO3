@@ -19,4 +19,10 @@ function isStudent(req, res, next) {
     return res.status(403).send('Forbidden: Students only');
 }
 
-module.exports = { isLoggedIn, isAdmin, isTech, isStudent };
+function isStudentOrTech(req, res, next) {
+    const role = req.session.user?.accountType;
+    if (role === 'student' || role === 'tech') return next();
+    return res.redirect('/dashboard');
+}
+
+module.exports = { isLoggedIn, isAdmin, isTech, isStudent, isStudentOrTech };
