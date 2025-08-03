@@ -23,6 +23,7 @@
     "express-session": "^1.18.1",
     "moment": "^2.30.1",
     "mongodb": "^6.17.0",
-    "mongoose": "^8.16.2"
+    "mongoose": "^8.17.0",
+    "session": "^0.1.0"
   }
 }
