@@ -53,9 +53,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 const seedDefaultAdmin = async () => {
     const existingAdmin = await User.findOne({ accountType: 'admin' }).lean();
     if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash('123', 10);
+
         await User.create({
             email: 'admin@dlsu.edu.ph',
-            password: '123',
+            password: hashedPassword,
             accountType: 'admin',
             studentID: 0,
             techID: 0,
@@ -388,12 +390,42 @@ app.post('/reserve-slot', isLoggedIn, async(req, res) => {
         const parsedLabID = parseInt(lab);
         const parsedSeatNumber = parseInt(seat);
 
+        // check for conflicting reservations in other labs (time slot overlaps)
+        const existingReservationsSameDate = await Reservation.find({
+            studentID: targetStudentID,
+            reserveDate: newReservationDate
+        });
+
+        for (const resv of existingReservationsSameDate) {
+            for (const slot of selectedTimeSlots) {
+                if (resv.timeList.includes(slot)) {
+                    if (resv.labID !== parsedLabID) {
+                        return res.status(409).send(`You already have a reservation in another lab during time slot ${slot}.`);
+                    }
+                }
+            }
+        }
+
+        // restricts students from reserving in the same lab on the same date with a different seat
+        const sameLabOtherSeat = await Reservation.findOne({
+            studentID: targetStudentID,
+            labID: parsedLabID,
+            reserveDate: newReservationDate,
+            seatNumber: { $ne: parsedSeatNumber }
+        });
+
+        if (sameLabOtherSeat) {
+            return res.status(409).send(
+                `You already have a reservation in this lab on that date at a different seat (Seat ${sameLabOtherSeat.seatNumber}).`
+            );
+        }
+
         // find existing reservations for the same lab, date, and seat
         const existingReservations = await Reservation.find({
             labID: parsedLabID,
             reserveDate: newReservationDate,
             seatNumber: parsedSeatNumber
-        })
+        });
 
         // check for time slot overlaps
         for(const reservation of existingReservations) {
@@ -405,18 +437,6 @@ app.post('/reserve-slot', isLoggedIn, async(req, res) => {
                 }
             }
         }
-
-        const newReservationID = await Reservation.generateReservationID();
-        
-        const newReservation = new Reservation({
-            reservationID: newReservationID,
-            labID: parsedLabID,
-            studentID: targetStudentID,
-            reserveDate: newReservationDate,
-            requestDate: Date.now(),
-            timeList: selectedTimeSlots,
-            seatNumber: parsedSeatNumber
-        });
 
         // added security check to prevent duplicate reservations
         const recentDuplicate = await Reservation.findOne({
@@ -432,6 +452,18 @@ app.post('/reserve-slot', isLoggedIn, async(req, res) => {
             return res.status(429).send('Duplicate reservation detected. Please wait a few seconds and try again.');
         }
 
+        const newReservationID = await Reservation.generateReservationID();
+
+        const newReservation = new Reservation({
+            reservationID: newReservationID,
+            labID: parsedLabID,
+            studentID: targetStudentID,
+            reserveDate: newReservationDate,
+            requestDate: Date.now(),
+            timeList: selectedTimeSlots,
+            seatNumber: parsedSeatNumber
+        });
+
         await newReservation.save();
         res.redirect('/dashboard?message=Reservation%20successful!');
     } catch (err) {
@@ -443,7 +475,8 @@ app.post('/reserve-slot', isLoggedIn, async(req, res) => {
         }
         res.status(500).send("Failed to make reservation. Please try again");
     }
-}); 
+});
+ 
 
 app.post('/delete-reservation', isLoggedIn, async(req, res) => {
     const { reservationID } = req.body;
