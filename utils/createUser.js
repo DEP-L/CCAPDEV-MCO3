@@ -11,14 +11,17 @@ async function createUser({ email, password, accountType, displayName }) {
     let idField = '';
     let generatedID = 0;
 
+    const validAccountTypes = ['student', 'tech', 'admin'];
+    if (!validAccountTypes.includes(accountType)) {
+        throw new Error('Invalid account type.');
+    }
+
     if (accountType === 'student') {
         idField = 'studentID';
         generatedID = await User.generateStudentID();
     } else if (accountType === 'tech') {
         idField = 'techID';
         generatedID = await User.generateTechID();
-    } else {
-        throw new Error('Invalid account type.');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

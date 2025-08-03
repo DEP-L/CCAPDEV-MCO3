@@ -6,16 +6,15 @@ const moment = require('moment');
 const path = require('path');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-const createUser = require('./utils/createUser');
 
-// --- models import --- 
-const User = require('./model/User');
+// --- models import ---
 const Lab = require('./model/Lab');
-const Reservation = require('./model/Reservation');
-const ErrorLog = require('./model/ErrorLog');
+const User = require('./model/User');
 
-// --- middlewares import ---
-const { isLoggedIn, isAdmin, isTech, isStudent } = require('./middlewares/auth');
+// --- routes import ---
+const commonRoutes = require('./routes/common');
+const adminRoutes = require('./routes/admin');
+const reservationRoutes = require('./routes/reservation');
 
 // --- express app initialization ---
 const app = express();
@@ -55,6 +54,8 @@ const seedDefaultAdmin = async () => {
     const hashedPassword = await bcrypt.hash('123', 10);
 
     if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash('123', 10);
+
         await User.create({
             email: 'admin@dlsu.edu.ph',
             password: hashedPassword,
@@ -105,21 +106,6 @@ app.engine('hbs', exphbs.engine({
 }));
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
-
-// --- authentication middleware
-//function isAuthenticated(req, res, next) {
-//    if(req.session.user) {
-//        return next();
-//    } 
-//    res.redirect('/login');
-//}
-
-function checkNotAuthenticated(req, res, next) {
-    if(req.session.user) {
-        return res.redirect('/dashboard');
-    }
-    next();
-}
 
 // --- routes ---
 
@@ -517,7 +503,6 @@ app.post('/delete-account/id/:id', isLoggedIn, async (req, res) => {
         res.status(500).send('Failed to delete account.');
     }
 });
-
 // --- admin routes ---
 app.get('/admin/create-tech', isLoggedIn, isAdmin, (req, res) => {
     res.render('admin/create-tech', {
@@ -635,3 +620,11 @@ async function seedDatabase() {
 mongoose.connection.on('connected', () => {
     seedDatabase();
 })
+
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
+}
+
+module.exports = app;

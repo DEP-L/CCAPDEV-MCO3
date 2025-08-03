@@ -1,5 +1,5 @@
 // --- utility for logging errors to the database ---
-const ErrorLog = require('../models/ErrorLog');
+const ErrorLog = require('../model/ErrorLog');
 
 const logError = async (err, route, userEmail = 'N/A') => {
     try {
