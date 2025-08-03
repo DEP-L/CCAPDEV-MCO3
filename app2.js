@@ -54,7 +54,6 @@ const seedDefaultAdmin = async () => {
     const hashedPassword = await bcrypt.hash('123', 10);
 
     if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash('123', 10);
 
         await User.create({
             email: 'admin@dlsu.edu.ph',
