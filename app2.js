@@ -110,11 +110,6 @@ app.use('/', commonRoutes);
 app.use('/', adminRoutes);
 app.use('/', reservationRoutes);
 
-// --- server initialization --- 
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
-
 // --- database seeding for labs ---
 async function seedDatabase() {
     try {
@@ -193,3 +188,11 @@ async function seedDatabase() {
 mongoose.connection.on('connected', () => {
     seedDatabase();
 })
+
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
+}
+
+module.exports = app;

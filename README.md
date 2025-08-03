@@ -14,8 +14,8 @@ Make sure you have the following installed on your machine:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/aaron-key/CCAPDEV_MCO2.git
-cd CCAPDEV_MCO2
+git clone https://github.com/DEP-L/CCAPDEV-MCO3.git
+cd CCAPDEV_MCO3
 ```
 
 ### 2. Install Dependencies
@@ -44,4 +44,22 @@ The server should now be running. By default, visit:
 
 ```
 http://localhost:3000
+```
+
+### 5. Unit Tests
+
+For Common Routes
+
+```bash
+npm run test:common
+```
+For Admin Routes
+
+```bash
+npm run test:admin
+```
+For Reservation Routes
+
+```bash
+npm run test:reservation
 ```
